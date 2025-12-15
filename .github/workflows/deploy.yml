@@ -14,14 +14,34 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
+    - name: Ensure Lock File Exists
+      run: |
+        if [ ! -f package-lock.json ] && [ -f package.json ]; then
+          echo "Generating package-lock.json..."
+          npm install --package-lock-only
+        elif [ ! -f package.json ] && [ ! -f package-lock.json ]; then
+          echo "No package.json found, initializing new project..."
+          npm init -y
+          npm install --package-lock-only
+        fi
+        
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18'
         cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Install Dependencies
+      run: |
+        # First check if we have a package.json to work with
+        if [ -f package.json ]; then
+          # Install dependencies and generate/update package-lock.json
+          npm install
+        else
+          echo "No package.json found, initializing project"
+          npm init -y
+          npm install
+        fi
 
     - name: Build
       run: npm run build
