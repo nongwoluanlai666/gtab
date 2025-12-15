@@ -18,12 +18,18 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: '18'
-        cache: 'npm'
 
-    - name: Install Dependencies and Generate Lock File
+    - name: Install Dependencies
       run: |
-        npm install
-        npm ci
+        # First check if we have a package.json to work with
+        if [ -f package.json ]; then
+          # Install dependencies and generate/update package-lock.json
+          npm install
+        else
+          echo "No package.json found, initializing project"
+          npm init -y
+          npm install
+        fi
 
     - name: Build
       run: npm run build
