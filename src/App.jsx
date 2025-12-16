@@ -27,9 +27,15 @@ const App = () => {
     const newBookmark = { 
       ...bookmark, 
       id: Date.now().toString(),
-      type: "icon",
-      src: "",
-      backgroundColor: ""
+      // If it's a folder, ensure it has the right structure
+      ...(bookmark.type === 'folder' ? {
+        size: bookmark.size || "1x1",
+        children: []
+      } : {
+        type: "icon",
+        src: "",
+        backgroundColor: ""
+      })
     };
 
     setConfig(prevConfig => {
@@ -117,33 +123,6 @@ const App = () => {
         
         newConfig.navConfig[currentTabIndex].children = 
           updateInArray(newConfig.navConfig[currentTabIndex].children, updatedBookmark.id, updatedBookmark);
-        
-        // Save config
-        ConfigManager.saveConfig(newConfig);
-      }
-      
-      return newConfig;
-    });
-  };
-
-  const handleCreateFolder = (folderName) => {
-    const newFolder = {
-      id: Date.now().toString(),
-      name: folderName,
-      size: "1x1",
-      type: "folder",
-      children: []
-    };
-
-    setConfig(prevConfig => {
-      const newConfig = { ...prevConfig };
-      const currentTabIndex = newConfig.navConfig.findIndex(tab => tab.id === currentTab);
-      
-      if (currentTabIndex !== -1) {
-        newConfig.navConfig[currentTabIndex].children = [
-          ...(newConfig.navConfig[currentTabIndex].children || []),
-          newFolder
-        ];
         
         // Save config
         ConfigManager.saveConfig(newConfig);
@@ -448,7 +427,48 @@ const App = () => {
                 <button
                   onClick={() => {
                     const folderName = prompt('Enter folder name:');
-                    if (folderName) handleCreateFolder(folderName);
+                    if (folderName) {
+                      // Prompt for folder size
+                      const sizeOptions = [
+                        { value: "1x1", label: "1x1 (Default)" },
+                        { value: "2x2", label: "2x2" },
+                        { value: "2x3", label: "2x3" },
+                        { value: "3x2", label: "3x2" },
+                        { value: "3x3", label: "3x3" }
+                      ];
+                      
+                      let sizeInput = prompt(`Enter folder size (1x1, 2x2, 2x3, 3x2, 3x3):\nOptions: ${sizeOptions.map(opt => opt.value).join(', ')}`);
+                      
+                      // Validate size input
+                      if (!sizeInput || !sizeOptions.some(opt => opt.value === sizeInput)) {
+                        sizeInput = "1x1"; // default to 1x1
+                      }
+                      
+                      const newFolder = {
+                        id: Date.now().toString(),
+                        name: folderName,
+                        size: sizeInput,
+                        type: "folder",
+                        children: []
+                      };
+                      
+                      setConfig(prevConfig => {
+                        const newConfig = { ...prevConfig };
+                        const currentTabIndex = newConfig.navConfig.findIndex(tab => tab.id === currentTab);
+                        
+                        if (currentTabIndex !== -1) {
+                          newConfig.navConfig[currentTabIndex].children = [
+                            ...(newConfig.navConfig[currentTabIndex].children || []),
+                            newFolder
+                          ];
+                          
+                          // Save config
+                          ConfigManager.saveConfig(newConfig);
+                        }
+                        
+                        return newConfig;
+                      });
+                    }
                   }}
                   className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all whitespace-nowrap flex items-center"
                 >
