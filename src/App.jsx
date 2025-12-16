@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BookmarksPanel from './components/BookmarksPanel';
 import AddBookmarkModal from './components/AddBookmarkModal';
 import FolderView from './components/FolderView';
-import { DndProvider } from 'react-beautiful-dnd';
+import { DragDropContext } from 'react-beautiful-dnd';
 
 const App = () => {
   const [bookmarks, setBookmarks] = useState([]);
@@ -236,7 +236,7 @@ const App = () => {
   );
 
   return (
-    <DndProvider>
+    <DragDropContext onDragEnd={handleDragEnd}>
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white">
         {/* Header */}
         <header className="p-6 backdrop-blur-md bg-black/20 border-b border-white/10">
@@ -357,7 +357,7 @@ const App = () => {
           />
         )}
       </div>
-    </DndProvider>
+    </DragDropContext>
   );
 };
 
