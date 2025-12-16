@@ -44,9 +44,16 @@ const FolderView = ({ folder, onDeleteBookmark, onUpdateBookmark, onDragEnd, onS
           <div
             {...provided.droppableProps}
             ref={provided.innerRef}
-            className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4 p-4 rounded-xl transition-all ${
+            className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 p-2 min-h-[500px] rounded-xl transition-all relative ${
               snapshot.isDraggingOver ? 'bg-white/10' : 'bg-transparent'
             }`}
+            style={{
+              backgroundImage: `
+                linear-gradient(rgba(100, 149, 237, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(100, 149, 237, 0.1) 1px, transparent 1px)
+              `,
+              backgroundSize: '60px 60px',
+            }}
           >
             {(folder.children || []).map((item, index) => (
               item.type === 'folder' ? (
@@ -56,16 +63,18 @@ const FolderView = ({ folder, onDeleteBookmark, onUpdateBookmark, onDragEnd, onS
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
-                      className={`bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-md rounded-lg p-3 border border-yellow-400/30 transition-all transform hover:scale-105 hover:shadow-xl cursor-pointer ${
+                      className={`bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-md rounded-lg p-2 border border-yellow-400/30 transition-all flex flex-col items-center ${
                         snapshot.isDragging ? 'shadow-2xl scale-110 z-10' : ''
                       }`}
                     >
-                      <div className="flex flex-col items-center">
-                        <div className="w-10 h-10 bg-yellow-500/30 rounded-lg flex items-center justify-center mb-1">
-                          <FolderIcon className="h-5 w-5 text-yellow-400" />
+                      <div className="flex-grow w-full flex items-center justify-center">
+                        <div className="w-8 h-8 bg-yellow-500/30 rounded-lg flex items-center justify-center">
+                          <FolderIcon className="h-4 w-4 text-yellow-400" />
                         </div>
+                      </div>
+                      <div className="mt-1 text-center">
                         <span className="text-xs font-medium text-center truncate w-full">{item.name}</span>
-                        <span className="text-xs text-gray-400 mt-1">
+                        <span className="text-xs text-gray-400 block mt-1">
                           {item.children?.length || 0} item{item.children?.length !== 1 ? 's' : ''}
                         </span>
                       </div>
@@ -79,54 +88,52 @@ const FolderView = ({ folder, onDeleteBookmark, onUpdateBookmark, onDragEnd, onS
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
-                      className={`bg-white/10 backdrop-blur-md rounded-lg p-3 border border-white/20 transition-all transform hover:scale-105 hover:shadow-xl hover:border-blue-400/50 ${
+                      className={`bg-white/10 backdrop-blur-md rounded-lg p-2 border border-white/20 transition-all flex flex-col items-center ${
                         snapshot.isDragging ? 'shadow-2xl scale-110 z-10' : ''
                       }`}
                     >
-                      <div className="flex flex-col items-center">
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full flex flex-col items-center"
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex flex-col items-center"
+                      >
+                        <img
+                          src={getFaviconUrl(item.url)}
+                          alt={item.title}
+                          className="w-6 h-6 rounded mb-1 object-contain"
+                          onError={(e) => {
+                            e.target.src = '/favicon.ico';
+                          }}
+                        />
+                        <span className="text-xs font-medium text-center truncate w-full">{item.title}</span>
+                      </a>
+                      
+                      <div className="flex space-x-1 mt-1">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const newTitle = prompt('Edit title:', item.title) || item.title;
+                            const newUrl = prompt('Edit URL:', item.url) || item.url;
+                            onUpdateBookmark({
+                              ...item,
+                              title: newTitle,
+                              url: newUrl
+                            });
+                          }}
+                          className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 rounded"
                         >
-                          <img
-                            src={getFaviconUrl(item.url)}
-                            alt={item.title}
-                            className="w-8 h-8 rounded-lg mb-1 object-contain"
-                            onError={(e) => {
-                              e.target.src = '/favicon.ico';
-                            }}
-                          />
-                          <span className="text-xs font-medium text-center truncate w-full">{item.title}</span>
-                        </a>
-                        
-                        <div className="flex space-x-1 mt-1">
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              const newTitle = prompt('Edit title:', item.title) || item.title;
-                              const newUrl = prompt('Edit URL:', item.url) || item.url;
-                              onUpdateBookmark({
-                                ...item,
-                                title: newTitle,
-                                url: newUrl
-                              });
-                            }}
-                            className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 rounded"
-                          >
-                            <PencilIcon className="h-3 w-3" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              onDeleteBookmark(item.id);
-                            }}
-                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded"
-                          >
-                            <TrashIcon className="h-3 w-3" />
-                          </button>
-                        </div>
+                          <PencilIcon className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onDeleteBookmark(item.id);
+                          }}
+                          className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded"
+                        >
+                          <TrashIcon className="h-3 w-3" />
+                        </button>
                       </div>
                     </div>
                   )}
