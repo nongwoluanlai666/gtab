@@ -1,14 +1,40 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Modern Tab - Beautiful New Tab Page</title>
-    <script type="module" crossorigin src="/gtab/assets/index-CpcFK7sJ.js"></script>
-    <link rel="stylesheet" crossorigin href="/gtab/assets/index-eQu5_FB0.css">
+    <title>Modern Tab - Your Personal Bookmark Manager</title>
+    <style>
+      /* Grid background animation */
+      .grid-animation {
+        display: grid;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.1;
+        background-image: 
+          linear-gradient(rgba(100, 149, 237, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(100, 149, 237, 0.1) 1px, transparent 1px);
+        background-size: 50px 50px;
+        animation: grid-move 20s linear infinite;
+      }
+      
+      @keyframes grid-move {
+        0% { transform: translate(0, 0); }
+        100% { transform: translate(50px, 50px); }
+      }
+    </style>
+    <script type="module" crossorigin src="/gtab/assets/index-cGxKQVWp.js"></script>
+    <link rel="stylesheet" crossorigin href="/gtab/assets/index-D6yghPTc.css">
   </head>
   <body>
     <div id="root"></div>
+    <!-- Grid background animation -->
+    <div class="grid-animation"></div>
   </body>
 </html>
