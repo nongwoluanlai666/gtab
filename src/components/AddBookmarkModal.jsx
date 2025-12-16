@@ -7,7 +7,13 @@ const AddBookmarkModal = ({ onClose, onAddBookmark, currentFolder }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (title.trim() && url.trim()) {
-      onAddBookmark({ title: title.trim(), url: url.trim() });
+      onAddBookmark({ 
+        title: title.trim(), 
+        url: url.trim(),
+        type: "icon",
+        src: "",
+        backgroundColor: ""
+      });
       setTitle('');
       setUrl('');
     }
