@@ -3,103 +3,173 @@ import BookmarksPanel from './components/BookmarksPanel';
 import AddBookmarkModal from './components/AddBookmarkModal';
 import FolderView from './components/FolderView';
 import { DragDropContext } from 'react-beautiful-dnd';
+import ConfigManager from './utils/ConfigManager';
 
 const App = () => {
-  const [bookmarks, setBookmarks] = useState([]);
-  const [folders, setFolders] = useState([]);
+  const [config, setConfig] = useState(ConfigManager.getConfig());
+  const [currentTab, setCurrentTab] = useState(config.navConfig[0]?.id || '1');
   const [currentFolder, setCurrentFolder] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
 
   // Load data from localStorage on component mount
   useEffect(() => {
-    const savedBookmarks = localStorage.getItem('bookmarks');
-    const savedFolders = localStorage.getItem('folders');
-    
-    if (savedBookmarks) {
-      setBookmarks(JSON.parse(savedBookmarks));
-    }
-    
-    if (savedFolders) {
-      setFolders(JSON.parse(savedFolders));
+    const savedConfig = ConfigManager.getConfig();
+    setConfig(savedConfig);
+    if (savedConfig.navConfig.length > 0) {
+      setCurrentTab(savedConfig.navConfig[0].id);
     }
   }, []);
 
-  // Save data to localStorage whenever bookmarks or folders change
-  useEffect(() => {
-    localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
-  }, [bookmarks]);
-
-  useEffect(() => {
-    localStorage.setItem('folders', JSON.stringify(folders));
-  }, [folders]);
-
   const handleAddBookmark = (bookmark) => {
-    if (currentFolder) {
-      // Add bookmark to folder
-      setFolders(prevFolders => 
-        prevFolders.map(folder => 
-          folder.id === currentFolder.id 
-            ? { ...folder, bookmarks: [...(folder.bookmarks || []), { ...bookmark, id: Date.now() }] }
-            : folder
-        )
-      );
-    } else {
-      // Add bookmark to main panel
-      setBookmarks(prevBookmarks => [...prevBookmarks, { ...bookmark, id: Date.now() }]);
-    }
+    const newBookmark = { 
+      ...bookmark, 
+      id: Date.now().toString(),
+      type: "icon",
+      src: "",
+      backgroundColor: ""
+    };
+
+    setConfig(prevConfig => {
+      const newConfig = { ...prevConfig };
+      const currentTabIndex = newConfig.navConfig.findIndex(tab => tab.id === currentTab);
+      
+      if (currentTabIndex !== -1) {
+        if (currentFolder) {
+          // Add to folder inside current tab
+          const currentTabChildren = newConfig.navConfig[currentTabIndex].children;
+          const folderIndex = currentTabChildren.findIndex(item => item.id === currentFolder.id);
+          
+          if (folderIndex !== -1 && currentTabChildren[folderIndex].type === 'folder') {
+            newConfig.navConfig[currentTabIndex].children[folderIndex].children = [
+              ...(currentTabChildren[folderIndex].children || []),
+              newBookmark
+            ];
+          }
+        } else {
+          // Add to main tab
+          newConfig.navConfig[currentTabIndex].children = [
+            ...(newConfig.navConfig[currentTabIndex].children || []),
+            newBookmark
+          ];
+        }
+        
+        // Save config
+        ConfigManager.saveConfig(newConfig);
+      }
+      
+      return newConfig;
+    });
+    
     setShowAddModal(false);
   };
 
   const handleDeleteBookmark = (id, fromFolder = false) => {
-    if (fromFolder && currentFolder) {
-      setFolders(prevFolders =>
-        prevFolders.map(folder =>
-          folder.id === currentFolder.id
-            ? { ...folder, bookmarks: folder.bookmarks.filter(b => b.id !== id) }
-            : folder
-        )
-      );
-    } else {
-      setBookmarks(prevBookmarks => prevBookmarks.filter(b => b.id !== id));
-    }
+    setConfig(prevConfig => {
+      const newConfig = { ...prevConfig };
+      const currentTabIndex = newConfig.navConfig.findIndex(tab => tab.id === currentTab);
+      
+      if (currentTabIndex !== -1) {
+        if (fromFolder && currentFolder) {
+          // Delete from folder inside current tab
+          const currentTabChildren = newConfig.navConfig[currentTabIndex].children;
+          const folderIndex = currentTabChildren.findIndex(item => item.id === currentFolder.id);
+          
+          if (folderIndex !== -1 && currentTabChildren[folderIndex].type === 'folder') {
+            newConfig.navConfig[currentTabIndex].children[folderIndex].children = 
+              (currentTabChildren[folderIndex].children || []).filter(item => item.id !== id);
+          }
+        } else {
+          // Delete from main tab
+          newConfig.navConfig[currentTabIndex].children = 
+            newConfig.navConfig[currentTabIndex].children.filter(item => item.id !== id);
+        }
+        
+        // Save config
+        ConfigManager.saveConfig(newConfig);
+      }
+      
+      return newConfig;
+    });
   };
 
-  const handleUpdateBookmark = (updatedBookmark, fromFolder = false) => {
-    if (fromFolder && currentFolder) {
-      setFolders(prevFolders =>
-        prevFolders.map(folder =>
-          folder.id === currentFolder.id
-            ? {
-                ...folder,
-                bookmarks: folder.bookmarks.map(b =>
-                  b.id === updatedBookmark.id ? updatedBookmark : b
-                )
-              }
-            : folder
-        )
-      );
-    } else {
-      setBookmarks(prevBookmarks =>
-        prevBookmarks.map(b => (b.id === updatedBookmark.id ? updatedBookmark : b))
-      );
-    }
+  const handleUpdateBookmark = (updatedBookmark) => {
+    setConfig(prevConfig => {
+      const newConfig = { ...prevConfig };
+      const currentTabIndex = newConfig.navConfig.findIndex(tab => tab.id === currentTab);
+      
+      if (currentTabIndex !== -1) {
+        const updateInArray = (arr, id, updatedItem) => {
+          return arr.map(item => {
+            if (item.id === id) {
+              return updatedItem;
+            } else if (item.type === 'folder' && item.children) {
+              return {
+                ...item,
+                children: updateInArray(item.children, id, updatedItem)
+              };
+            }
+            return item;
+          });
+        };
+        
+        newConfig.navConfig[currentTabIndex].children = 
+          updateInArray(newConfig.navConfig[currentTabIndex].children, updatedBookmark.id, updatedBookmark);
+        
+        // Save config
+        ConfigManager.saveConfig(newConfig);
+      }
+      
+      return newConfig;
+    });
   };
 
   const handleCreateFolder = (folderName) => {
     const newFolder = {
-      id: Date.now(),
+      id: Date.now().toString(),
       name: folderName,
-      bookmarks: []
+      size: "1x1",
+      type: "folder",
+      children: []
     };
-    setFolders(prevFolders => [...prevFolders, newFolder]);
+
+    setConfig(prevConfig => {
+      const newConfig = { ...prevConfig };
+      const currentTabIndex = newConfig.navConfig.findIndex(tab => tab.id === currentTab);
+      
+      if (currentTabIndex !== -1) {
+        newConfig.navConfig[currentTabIndex].children = [
+          ...(newConfig.navConfig[currentTabIndex].children || []),
+          newFolder
+        ];
+        
+        // Save config
+        ConfigManager.saveConfig(newConfig);
+      }
+      
+      return newConfig;
+    });
   };
 
   const handleDeleteFolder = (folderId) => {
-    setFolders(prevFolders => prevFolders.filter(folder => folder.id !== folderId));
-    if (currentFolder?.id === folderId) {
-      setCurrentFolder(null);
-    }
+    setConfig(prevConfig => {
+      const newConfig = { ...prevConfig };
+      const currentTabIndex = newConfig.navConfig.findIndex(tab => tab.id === currentTab);
+      
+      if (currentTabIndex !== -1) {
+        newConfig.navConfig[currentTabIndex].children = 
+          newConfig.navConfig[currentTabIndex].children.filter(item => item.id !== folderId);
+      }
+      
+      if (currentFolder?.id === folderId) {
+        setCurrentFolder(null);
+      }
+      
+      // Save config
+      ConfigManager.saveConfig(newConfig);
+      return newConfig;
+    });
   };
 
   const handleDragEnd = (result) => {
@@ -114,138 +184,190 @@ const App = () => {
       return;
     }
 
-    if (type === 'folder') {
-      const newFolderOrder = Array.from(folders);
-      const movedFolder = newFolderOrder[source.index];
+    setConfig(prevConfig => {
+      const newConfig = { ...prevConfig };
+      const currentTabIndex = newConfig.navConfig.findIndex(tab => tab.id === currentTab);
       
-      newFolderOrder.splice(source.index, 1);
-      newFolderOrder.splice(destination.index, 0, movedFolder);
-      
-      setFolders(newFolderOrder);
-      return;
-    }
+      if (currentTabIndex === -1) return prevConfig;
 
-    if (source.droppableId === 'bookmarks' && destination.droppableId === 'bookmarks') {
-      // Reorder bookmarks in main panel
-      const newBookmarks = Array.from(bookmarks);
-      const movedBookmark = newBookmarks[source.index];
+      const currentTabChildren = newConfig.navConfig[currentTabIndex].children;
       
-      newBookmarks.splice(source.index, 1);
-      newBookmarks.splice(destination.index, 0, movedBookmark);
-      
-      setBookmarks(newBookmarks);
-    } else if (source.droppableId.startsWith('folder-') && destination.droppableId.startsWith('folder-')) {
-      // Move bookmark between folders
-      const sourceFolderId = parseInt(source.droppableId.split('-')[1]);
-      const destFolderId = parseInt(destination.droppableId.split('-')[1]);
-      
-      if (sourceFolderId === destFolderId) {
-        // Reorder within same folder
-        const folderIndex = folders.findIndex(f => f.id === sourceFolderId);
+      // Helper function to find item and its path
+      const findItemWithPath = (items, id, path = []) => {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.id === id) {
+            return { item, path: [...path, i] };
+          }
+          if (item.type === 'folder' && item.children) {
+            const found = findItemWithPath(item.children, id, [...path, i, 'children']);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      // Find source item
+      const sourceItemPath = findItemWithPath(currentTabChildren, draggableId);
+      if (!sourceItemPath) return prevConfig;
+
+      // Extract item from source
+      const extractItem = (items, path) => {
+        if (path.length === 1) {
+          const index = path[0];
+          const [removedItem] = items.splice(index, 1);
+          return removedItem;
+        } else {
+          const [first, ...rest] = path;
+          if (first === 'children' && Array.isArray(items)) {
+            return extractItem(items, rest);
+          } else if (typeof first === 'number' && items[first]) {
+            return extractItem(items[first].children, rest);
+          }
+        }
+      };
+
+      // Insert item to destination
+      const insertItem = (items, path, item) => {
+        if (path.length === 1) {
+          const index = path[0];
+          items.splice(index, 0, item);
+        } else {
+          const [first, ...rest] = path;
+          if (first === 'children' && Array.isArray(items)) {
+            insertItem(items, rest, item);
+          } else if (typeof first === 'number' && items[first]) {
+            insertItem(items[first].children, rest, item);
+          }
+        }
+      };
+
+      // Get source item and remove it from source
+      const sourceItem = extractItem(currentTabChildren, sourceItemPath.path);
+
+      // Determine destination path
+      let destPath = [];
+      if (destination.droppableId === 'bookmarks') {
+        // Destination is main tab
+        destPath = [destination.index];
+      } else if (destination.droppableId.startsWith('folder-')) {
+        // Destination is a folder
+        const folderId = destination.droppableId.replace('folder-', '');
+        const folderIndex = currentTabChildren.findIndex(item => item.id === folderId);
         if (folderIndex !== -1) {
-          const newFolders = [...folders];
-          const newFolderBookmarks = Array.from(newFolders[folderIndex].bookmarks);
-          const movedBookmark = newFolderBookmarks[source.index];
-          
-          newFolderBookmarks.splice(source.index, 1);
-          newFolderBookmarks.splice(destination.index, 0, movedBookmark);
-          
-          newFolders[folderIndex] = { ...newFolders[folderIndex], bookmarks: newFolderBookmarks };
-          setFolders(newFolders);
-        }
-      } else {
-        // Move from one folder to another
-        const sourceFolderIndex = folders.findIndex(f => f.id === sourceFolderId);
-        const destFolderIndex = folders.findIndex(f => f.id === destFolderId);
-        
-        if (sourceFolderIndex !== -1 && destFolderIndex !== -1) {
-          const newFolders = [...folders];
-          const sourceBookmark = newFolders[sourceFolderIndex].bookmarks.find(b => b.id === parseInt(draggableId));
-          
-          // Remove from source folder
-          newFolders[sourceFolderIndex] = {
-            ...newFolders[sourceFolderIndex],
-            bookmarks: newFolders[sourceFolderIndex].bookmarks.filter(b => b.id !== parseInt(draggableId))
-          };
-          
-          // Add to destination folder
-          newFolders[destFolderIndex] = {
-            ...newFolders[destFolderIndex],
-            bookmarks: [
-              ...newFolders[destFolderIndex].bookmarks,
-              { ...sourceBookmark, id: Date.now() } // Assign new ID to avoid conflicts
-            ]
-          };
-          
-          setFolders(newFolders);
+          destPath = [folderIndex, 'children', destination.index];
         }
       }
-    } else if (source.droppableId === 'bookmarks' && destination.droppableId.startsWith('folder-')) {
-      // Move from main panel to folder
-      const destFolderId = parseInt(destination.droppableId.split('-')[1]);
-      const bookmarkToMove = bookmarks.find(b => b.id === parseInt(draggableId));
-      
-      if (bookmarkToMove) {
-        // Remove from main panel
-        setBookmarks(prev => prev.filter(b => b.id !== parseInt(draggableId)));
-        
-        // Add to destination folder
-        setFolders(prevFolders =>
-          prevFolders.map(folder =>
-            folder.id === destFolderId
-              ? { ...folder, bookmarks: [...folder.bookmarks, { ...bookmarkToMove, id: Date.now() }] }
-              : folder
-          )
-        );
+
+      // Insert item at destination
+      if (destPath.length > 0) {
+        insertItem(currentTabChildren, destPath, sourceItem);
       }
-    } else if (source.droppableId.startsWith('folder-') && destination.droppableId === 'bookmarks') {
-      // Move from folder to main panel
-      const sourceFolderId = parseInt(source.droppableId.split('-')[1]);
-      const bookmarkToMove = folders
-        .find(f => f.id === sourceFolderId)
-        ?.bookmarks.find(b => b.id === parseInt(draggableId));
-      
-      if (bookmarkToMove) {
-        // Remove from folder
-        setFolders(prevFolders =>
-          prevFolders.map(folder =>
-            folder.id === sourceFolderId
-              ? { ...folder, bookmarks: folder.bookmarks.filter(b => b.id !== parseInt(draggableId)) }
-              : folder
-          )
-        );
-        
-        // Add to main panel
-        setBookmarks(prev => [...prev, { ...bookmarkToMove, id: Date.now() }]);
-      }
-    }
+
+      // Save config
+      ConfigManager.saveConfig(newConfig);
+      return newConfig;
+    });
   };
 
-  // Filter bookmarks based on search query
-  const filteredBookmarks = bookmarks.filter(bookmark =>
-    bookmark.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    bookmark.url.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Get current tab data
+  const currentTabData = config.navConfig.find(tab => tab.id === currentTab) || { children: [] };
 
-  const filteredFolders = folders.filter(folder =>
-    folder.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    folder.bookmarks.some(bookmark =>
-      bookmark.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bookmark.url.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
+  // Filter bookmarks based on search query
+  const getFilteredItems = (items) => {
+    return items.filter(item => {
+      if (item.type === 'folder') {
+        // For folders, check if folder name matches or any child matches
+        return (
+          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (item.children && item.children.some(child => 
+            child.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            child.url?.toLowerCase().includes(searchQuery.toLowerCase())
+          ))
+        );
+      } else {
+        // For regular items, check title and url
+        return (
+          item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.url?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      }
+    });
+  };
+
+  const filteredItems = getFilteredItems(currentTabData.children || []);
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white">
-        {/* Header */}
+      <div 
+        className="min-h-screen text-white"
+        style={{
+          backgroundImage: config.baseConfig.wallpaper?.src ? `url(${config.baseConfig.wallpaper.src})` : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundColor: config.baseConfig.theme?.mode === 'dark' ? '#0f0f1f' : '#f0f0ff',
+          opacity: 1 - (config.baseConfig.wallpaper?.mask || 0.26)
+        }}
+      >
+        {/* Header with search and settings */}
         <header className="p-6 backdrop-blur-md bg-black/20 border-b border-white/10">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-              Modern Tab
-            </h1>
+            <div className="flex items-center space-x-4">
+              <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                Modern Tab
+              </h1>
+              
+              {/* Tab Navigation */}
+              <div className="flex space-x-2">
+                {config.navConfig.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setCurrentTab(tab.id);
+                      setCurrentFolder(null);
+                    }}
+                    className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                      currentTab === tab.id
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg'
+                        : 'bg-white/10 hover:bg-white/20'
+                    }`}
+                  >
+                    {tab.name}
+                  </button>
+                ))}
+                
+                <button
+                  onClick={() => {
+                    const tabName = prompt('Enter tab name:');
+                    if (tabName) {
+                      const newTab = {
+                        id: Date.now().toString(),
+                        name: tabName,
+                        icon: "home",
+                        children: []
+                      };
+                      
+                      setConfig(prevConfig => {
+                        const newConfig = { ...prevConfig };
+                        newConfig.navConfig = [...newConfig.navConfig, newTab];
+                        ConfigManager.saveConfig(newConfig);
+                        return newConfig;
+                      });
+                    }
+                  }}
+                  className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all whitespace-nowrap flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                  </svg>
+                  New Tab
+                </button>
+              </div>
+            </div>
             
             <div className="flex items-center space-x-4">
+              {/* Search */}
               <div className="relative">
                 <input
                   type="text"
@@ -255,6 +377,16 @@ const App = () => {
                   className="px-4 py-2 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
                 />
               </div>
+              
+              {/* Settings Button */}
+              <button
+                onClick={() => setShowSettings(true)}
+                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+              </button>
               
               <button
                 onClick={() => setShowAddModal(true)}
@@ -282,7 +414,7 @@ const App = () => {
                   All Bookmarks
                 </button>
                 
-                {filteredFolders.map((folder) => (
+                {filteredItems.filter(item => item.type === 'folder').map((folder) => (
                   <div key={folder.id} className="flex items-center group">
                     <button
                       onClick={() => setCurrentFolder(folder)}
@@ -337,8 +469,7 @@ const App = () => {
               />
             ) : (
               <BookmarksPanel
-                bookmarks={filteredBookmarks}
-                folders={filteredFolders}
+                items={filteredItems}
                 onDeleteBookmark={handleDeleteBookmark}
                 onUpdateBookmark={handleUpdateBookmark}
                 onDragEnd={handleDragEnd}
@@ -354,6 +485,33 @@ const App = () => {
             onClose={() => setShowAddModal(false)}
             onAddBookmark={handleAddBookmark}
             currentFolder={currentFolder}
+          />
+        )}
+        
+        {/* Settings Modal */}
+        {showSettings && (
+          <SettingsModal 
+            config={config} 
+            onSave={(newConfig) => {
+              setConfig(newConfig);
+              ConfigManager.saveConfig(newConfig);
+              setShowSettings(false);
+            }}
+            onClose={() => setShowSettings(false)}
+            onExport={ConfigManager.exportConfig}
+            onImport={(configData) => {
+              if (ConfigManager.importConfig(configData)) {
+                const newConfig = ConfigManager.getConfig();
+                setConfig(newConfig);
+                setShowSettings(false);
+              }
+            }}
+            onReset={() => {
+              ConfigManager.resetConfig();
+              const newConfig = ConfigManager.getConfig();
+              setConfig(newConfig);
+              setShowSettings(false);
+            }}
           />
         )}
       </div>

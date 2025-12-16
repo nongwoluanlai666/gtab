@@ -1,8 +1,8 @@
 import React from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { Droppable, Draggable } from 'react-beautiful-dnd';
 import { PencilIcon, TrashIcon, FolderIcon } from '@heroicons/react/24/outline';
 
-const BookmarksPanel = ({ bookmarks, folders, onDeleteBookmark, onUpdateBookmark, onDragEnd, onShowAddModal }) => {
+const BookmarksPanel = ({ items, onDeleteBookmark, onUpdateBookmark, onDragEnd, onShowAddModal }) => {
   const getFaviconUrl = (url) => {
     try {
       const domain = new URL(url).hostname;
@@ -12,8 +12,12 @@ const BookmarksPanel = ({ bookmarks, folders, onDeleteBookmark, onUpdateBookmark
     }
   };
 
+  // Separate items into bookmarks and folders
+  const bookmarks = items.filter(item => item.type !== 'folder');
+  const folders = items.filter(item => item.type === 'folder');
+
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
+    <>
       {/* Main Bookmarks Section */}
       <section className="mb-8">
         <div className="flex justify-between items-center mb-4">
@@ -149,7 +153,7 @@ const BookmarksPanel = ({ bookmarks, folders, onDeleteBookmark, onUpdateBookmark
           )}
         </Droppable>
       </section>
-    </DragDropContext>
+    </>
   );
 };
 
