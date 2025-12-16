@@ -292,7 +292,7 @@ const App = () => {
         }}
       >
         {/* Header with search and settings */}
-        <header className="p-6 backdrop-blur-md bg-black/20 border-b border-white/10">
+        <header className="p-6 backdrop-blur-md bg-black/20 border-b border-white/10 sticky top-0 z-40">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
@@ -379,7 +379,13 @@ const App = () => {
           </div>
         </header>
 
-        <main className="p-6 pt-4">
+        <main className="p-6 pt-4" style={{
+          backgroundImage: `
+            linear-gradient(rgba(100, 149, 237, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(100, 149, 237, 0.05) 1px, transparent 1px)
+          `,
+          backgroundSize: '60px 60px',
+        }}>
           <div className="max-w-7xl mx-auto">
             {/* Folder Navigation */}
             <div className="mb-6">
