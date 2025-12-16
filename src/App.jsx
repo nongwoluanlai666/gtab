@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BookmarksPanel from './components/BookmarksPanel';
 import AddBookmarkModal from './components/AddBookmarkModal';
 import FolderView from './components/FolderView';
+import SettingsModal from './components/SettingsModal';
 import { DragDropContext } from 'react-beautiful-dnd';
 import ConfigManager from './utils/ConfigManager';
 
@@ -217,28 +218,29 @@ const App = () => {
           const index = path[0];
           const [removedItem] = items.splice(index, 1);
           return removedItem;
-        } else {
-          const [first, ...rest] = path;
-          if (first === 'children' && Array.isArray(items)) {
-            return extractItem(items, rest);
-          } else if (typeof first === 'number' && items[first]) {
-            return extractItem(items[first].children, rest);
-          }
+        } else if (path.length === 3 && path[1] === 'children') {
+          // Path is [folderIndex, 'children', childIndex] - extracting from folder
+          const folderIndex = path[0];
+          const childIndex = path[2];
+          return currentTabChildren[folderIndex].children.splice(childIndex, 1)[0];
         }
+        return null;
       };
 
       // Insert item to destination
       const insertItem = (items, path, item) => {
         if (path.length === 1) {
+          // Insert into main tab
           const index = path[0];
           items.splice(index, 0, item);
-        } else {
-          const [first, ...rest] = path;
-          if (first === 'children' && Array.isArray(items)) {
-            insertItem(items, rest, item);
-          } else if (typeof first === 'number' && items[first]) {
-            insertItem(items[first].children, rest, item);
+        } else if (path.length === 3 && path[1] === 'children') {
+          // Insert into folder
+          const folderIndex = path[0];
+          const childIndex = path[2];
+          if (!currentTabChildren[folderIndex].children) {
+            currentTabChildren[folderIndex].children = [];
           }
+          currentTabChildren[folderIndex].children.splice(childIndex, 0, item);
         }
       };
 

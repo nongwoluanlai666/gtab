@@ -56,17 +56,17 @@ const FolderView = ({ folder, onDeleteBookmark, onUpdateBookmark, onDragEnd, onS
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
-                      className={`bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-md rounded-xl p-4 border border-yellow-400/30 transition-all transform hover:scale-105 hover:shadow-xl cursor-pointer ${
+                      className={`bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-md rounded-lg p-3 border border-yellow-400/30 transition-all transform hover:scale-105 hover:shadow-xl cursor-pointer ${
                         snapshot.isDragging ? 'shadow-2xl scale-110 z-10' : ''
                       }`}
                     >
                       <div className="flex flex-col items-center">
-                        <div className="w-12 h-12 bg-yellow-500/30 rounded-lg flex items-center justify-center mb-2">
-                          <FolderIcon className="h-6 w-6 text-yellow-400" />
+                        <div className="w-10 h-10 bg-yellow-500/30 rounded-lg flex items-center justify-center mb-1">
+                          <FolderIcon className="h-5 w-5 text-yellow-400" />
                         </div>
-                        <span className="font-medium text-center truncate w-full">{item.name}</span>
+                        <span className="text-xs font-medium text-center truncate w-full">{item.name}</span>
                         <span className="text-xs text-gray-400 mt-1">
-                          {item.children?.length || 0} bookmark{item.children?.length !== 1 ? 's' : ''}
+                          {item.children?.length || 0} item{item.children?.length !== 1 ? 's' : ''}
                         </span>
                       </div>
                     </div>
@@ -79,7 +79,7 @@ const FolderView = ({ folder, onDeleteBookmark, onUpdateBookmark, onDragEnd, onS
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
-                      className={`bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 transition-all transform hover:scale-105 hover:shadow-xl hover:border-blue-400/50 ${
+                      className={`bg-white/10 backdrop-blur-md rounded-lg p-3 border border-white/20 transition-all transform hover:scale-105 hover:shadow-xl hover:border-blue-400/50 ${
                         snapshot.isDragging ? 'shadow-2xl scale-110 z-10' : ''
                       }`}
                     >
@@ -93,15 +93,15 @@ const FolderView = ({ folder, onDeleteBookmark, onUpdateBookmark, onDragEnd, onS
                           <img
                             src={getFaviconUrl(item.url)}
                             alt={item.title}
-                            className="w-10 h-10 rounded-lg mb-2 object-contain"
+                            className="w-8 h-8 rounded-lg mb-1 object-contain"
                             onError={(e) => {
                               e.target.src = '/favicon.ico';
                             }}
                           />
-                          <span className="text-sm font-medium text-center truncate w-full">{item.title}</span>
+                          <span className="text-xs font-medium text-center truncate w-full">{item.title}</span>
                         </a>
                         
-                        <div className="flex space-x-1 mt-2">
+                        <div className="flex space-x-1 mt-1">
                           <button
                             onClick={(e) => {
                               e.preventDefault();
@@ -115,7 +115,7 @@ const FolderView = ({ folder, onDeleteBookmark, onUpdateBookmark, onDragEnd, onS
                             }}
                             className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 rounded"
                           >
-                            <PencilIcon className="h-4 w-4" />
+                            <PencilIcon className="h-3 w-3" />
                           </button>
                           <button
                             onClick={(e) => {
@@ -124,7 +124,7 @@ const FolderView = ({ folder, onDeleteBookmark, onUpdateBookmark, onDragEnd, onS
                             }}
                             className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded"
                           >
-                            <TrashIcon className="h-4 w-4" />
+                            <TrashIcon className="h-3 w-3" />
                           </button>
                         </div>
                       </div>
