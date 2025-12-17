@@ -260,7 +260,7 @@ const App = () => {
       if (item.type === 'folder') {
         // For folders, check if folder name matches or any child matches
         return (
-          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (item.children && item.children.some(child => 
             child.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             child.url?.toLowerCase().includes(searchQuery.toLowerCase())
